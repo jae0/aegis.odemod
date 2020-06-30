@@ -90,18 +90,8 @@ birth_death_fishing = function( selection="stan" ) {
           }
         }
       }
-
-    //   generated quantities {
-    //     real F[U,N];
-    //     for (u in 1:U) {
-    //       for (n in 1:N) {
-    //         real f = fmin( 1.0, fmax(eps, 1.0 - CAT[u,n]/ (K[u] * X[u,n] ) ) );
-    //         F[u,n] = -log( f );
-    //       }
-    //     }
-    //   }
-
     "
+
     }
 
     if (selection=="siminf") {

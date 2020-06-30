@@ -12,7 +12,9 @@
 
   require(aegis)
   require(bio.snowcrab)
-  require(aegis.odemod)
+  # require(aegis.odemod)
+  # loadfunctions("aegis.odemod")
+
 
   year.assessment = 2019
 
@@ -26,7 +28,7 @@
   # spplot( sppoly, "au_sa_km2", main="AUID", sp.layout=p$coastLayout )
 
 
-  # loadfunctions("ecomod")
+  # loadfunctions("aegis.odemod")
 
   p$fishery_model = list()
   p$fishery_model$method = "stan"  # "jags", etc.
@@ -35,7 +37,7 @@
 
   p$fishery_model$standata = numerical_abundance_catch(p, lag=1 )
 
-  # loadfunctions("ecomod")
+  # loadfunctions("aegis.odemod")
 
   p$fishery_model$stancode = birth_death_fishing()
   p$fishery_model$stancode_compiled = rstan::stan_model( model_code=p$fishery_model$stancode )
@@ -150,26 +152,25 @@
 
 
 
-    abundance = posteriors$X[]*0
-    for ( i in 1:dim(posteriors$X)[3] ) abundance[,,i] = posteriors$X[,,i] * posteriors$K
+    A = birth_death_fishing_extract( "abundance", posteriors=posteriors ) )
+    F = birth_death_fishing_extract( "fishing.mortality", posteriors=posteriors, catch=p$fishery_model$standata$CAT ) )
 
-    ny = dim(abundance)[3]
-    nposts =dim(abundance)[1]
-    plot( 0,0, xlim=c(0, ny ), ylim=range( c(abundance[ ,au, ], posteriors$K[ ,au], p$fishery_model$standata$CAT[au,]), na.rm=TRUE), type="n")
+    ny = dim(A)[3]
+    nposts =dim(A)[1]
+    plot( 0,0, xlim=c(0, ny ), ylim=range( c(A[ ,au, ], posteriors$K[ ,au], p$fishery_model$standata$CAT[au,]), na.rm=TRUE), type="n")
     for (i in 1:nposts) {
-      lines( abundance[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
+      lines( A[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
       abline( h=posteriors$K[i , au]), col=alpha("orange", 0.1) )
     }
     lines( p$fishery_model$standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
     lines( p$fishery_model$standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
-    lines( apply( abundance[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
+    lines( apply( A[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
     abline( h=median( posteriors$K[ , au]), col=alpha("orange", 0.9), lwd=4 )
 
 
   }
 
 
-  F = logistic_discrete_fishing_mortality( catch, abundance )
 
   o = logistic_discrete_reference_points( posteriors$r, posteriors$K )
 
