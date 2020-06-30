@@ -6,9 +6,13 @@
 # 03.snowcrab... or comparable must has been completed .. ie carstm model
 
 
-  require(bio.snowcrab)
   require(SimInf)
   require(ggplot2)
+  require(rstan)
+
+  require(aegis)
+  require(bio.snowcrab)
+  require(aegis.odemod)
 
   year.assessment = 2019
 
