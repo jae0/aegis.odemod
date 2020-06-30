@@ -1,0 +1,9 @@
+Package: aegis.odemod
+Title: Fit simple dynamical ODE to aegis/carstm prediction to estimate dynamical parameters and forward simulation.
+Version: 0.1
+Authors@R: c( person("Jae", "Choi", email="choi.jae.seok@gmail.com", role=c("aut", "cre")) )
+Description: Fit simple dynamical ODE to aegis/carstm prediction to estimate dynamical parameters and forward simulation. This depends upon aegis and carstm.
+Depends: R (>= 3.0.0)
+Suggests: aegis, carstm, sp, sf
+License: MIT
+URL: https://github.com/jae0/aegis.odemod/
