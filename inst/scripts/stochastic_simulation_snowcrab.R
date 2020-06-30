@@ -37,8 +37,7 @@
 
   # loadfunctions("ecomod")
 
-  p$fishery_model$stancode = logistic_discrete_stan()
-  #  p$fishery_model$stancode = logistic_discrete_stan("theta_logistic_r_ar_poisson")
+  p$fishery_model$stancode = birth_death_fishing()
   p$fishery_model$stancode_compiled = rstan::stan_model( model_code=p$fishery_model$stancode )
   # later:::ensureInitialized()  # solve mode error
 
@@ -186,13 +185,10 @@
 
   istart = ndata
 
-  ST = c(
-    "@ -> r*N  -> N" ,
-    "N -> r*N*N/K -> MC",
-    "N -> f*N -> CC"
-  )
 
-  SC = c( "N", "MC", "CC" )
+  ST = birth_death_fishing("siminf")
+
+  SC = c( "N",  "C" )
 
   nthreads = 4
 
@@ -212,11 +208,12 @@
 
   u0 = data.frame(
     N = as.integer( trunc(N) ),
-    CC = as.integer( rep(0, length(N))),
-    MC = as.integer( rep(0, length(N))),
+    C = as.integer( rep(0, length(N))),
     f = F[iss, au, istart],
-    r = posteriors$r[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-    K = as.integer( K )
+    b = posteriors$b[iss, au, istart],  # note, BETA is conditioned on previous time step. .
+    m = posteriors$m[iss, au, istart],  # note, BETA is conditioned on previous time step. .
+    theta = posteriors$theta[iss, au, istart],  # note, BETA is conditioned on previous time step. .
+    K = as.integer( posteriors$K[iss, au] )
   )
 
   for (i in 1:nsims) {
