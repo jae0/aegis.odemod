@@ -39,7 +39,7 @@
 
   # loadfunctions("aegis.odemod")
 
-  p$fishery_model$stancode = birth_death_fishing()
+  p$fishery_model$stancode = birth_death_fishing( "stan_code" )
   p$fishery_model$stancode_compiled = rstan::stan_model( model_code=p$fishery_model$stancode )
   # later:::ensureInitialized()  # solve mode error
 
@@ -62,33 +62,32 @@
   )
 
   posteriors = rstan::extract( res )  # posteriors = mcmc posteriors from STAN
+ 
+  # add other params of interest
+  posteriors = c( 
+    posteriors, 
+    birth_death_fishing( "extract", X=posteriors$X, K=posteriors$K, catch=p$fishery_model$standata$CAT )
+  )
 
 
   if (0){
     fn = file.path(  "~", "tmp", "smallarea.rdata" )
     save( res , file=fn, compress=TRUE )
     load( fn )
-  }
 
-
-
-  {
     au = 1
     au = 2
 
     hist(posteriors$K[,au], "fd")
 
-    if (length(dim( posteriors$r))==3) {
-      hist(posteriors$r[,,au], "fd")
-
       plot( posteriors$g ~ posteriors$m )
 
-      hist( posteriors$g - posteriors$m - posteriors$f)
+      hist( posteriors$g - posteriors$m - posteriors$fishing.mortality)
 
-      ny = dim(posteriors$F)[3]
+      ny = dim(posteriors$fishing.mortality)[3]
       plot(0,0, xlim=c(0, ny ), ylim=c(0,1.25), na.rm=TRUE, type="n")
-      for (sim in 1:dim(posteriors$F)[1]){
-        lines( posteriors$F[sim,au, ]  ~  c(1:ny), col=alpha(au, 0.05)  )
+      for (sim in 1:dim(posteriors$fishing.mortality)[1]){
+        lines( posteriors$fishing.mortality[sim,au, ]  ~  c(1:ny), col=alpha(au, 0.05)  )
       }
 
       ny = dim(posteriors$g)[3]
@@ -114,14 +113,6 @@
         points( posteriors$r[,au,tu ] ~ posteriors$K[,au], col=alpha(tu, 0.1), pch=19, cex=0.6 )
       }
 
-
-    } else {
-      hist(posteriors$r[,au], "fd")
-
-      plot(0,0, xlim=range(posteriors$K[,au]), ylim=range(posteriors$r[,au]), na.rm=TRUE, type="n")
-      points( posteriors$r[,au ] ~ posteriors$K[,au], col=alpha("red", 0.1), pch=19, cex=0.6 )
-
-    }
 
     plot( p$fishery_model$standata$CAT[au,] ~ c(1:ny), ylim=range(c(posteriors$cat[,au,] * posteriors$K[,au])))
     for (i in 1:nposts) {
@@ -152,29 +143,22 @@
 
 
 
-    A = birth_death_fishing_extract( "abundance", posteriors=posteriors ) )
-    F = birth_death_fishing_extract( "fishing.mortality", posteriors=posteriors, catch=p$fishery_model$standata$CAT ) )
-
-    ny = dim(A)[3]
-    nposts =dim(A)[1]
-    plot( 0,0, xlim=c(0, ny ), ylim=range( c(A[ ,au, ], posteriors$K[ ,au], p$fishery_model$standata$CAT[au,]), na.rm=TRUE), type="n")
+    
+    ny = dim(posteriors$abundance)[3]
+    nposts =dim(posteriors$abundance)[1]
+    plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$abundance[ ,au, ], posteriors$K[ ,au], p$fishery_model$standata$CAT[au,]), na.rm=TRUE), type="n")
     for (i in 1:nposts) {
-      lines( A[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
+      lines( posteriors$abundance[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
       abline( h=posteriors$K[i , au]), col=alpha("orange", 0.1) )
     }
     lines( p$fishery_model$standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
     lines( p$fishery_model$standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
-    lines( apply( A[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
+    lines( apply( posteriors$abundance[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
     abline( h=median( posteriors$K[ , au]), col=alpha("orange", 0.9), lwd=4 )
 
 
   }
 
-
-
-  o = logistic_discrete_reference_points( posteriors$r, posteriors$K )
-
-  #p$fishery_model$standata= res$p$fishery_model$standata
 
   yrs0 = p$assessment.years
   yrs.last = max(yrs0) + 0.5
@@ -187,7 +171,7 @@
   istart = ndata
 
 
-  ST = birth_death_fishing("siminf")
+  ST = birth_death_fishing("siminf_code")
 
   SC = c( "N",  "C" )
 
