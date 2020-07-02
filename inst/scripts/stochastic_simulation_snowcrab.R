@@ -69,6 +69,15 @@
     birth_death_fishing( "extract", X=posteriors$X, K=posteriors$K, catch=p$fishery_model$standata$CAT )
   )
 
+  sims = birth_death_fishing( "stochastic_simulation", 
+    X=posteriors$abundance, 
+    K=posteriors$K, 
+    catch=p$fishery_model$standata$CAT, 
+    g=posteriors$g, 
+    m=posteriors$m,
+    f=posteriors$fishing.mortality 
+  )
+  
 
   if (0){
     fn = file.path(  "~", "tmp", "smallarea.rdata" )
@@ -167,52 +176,8 @@
 
   au = 1
 
-
   istart = ndata
 
-
-  ST = birth_death_fishing("siminf_code")
-
-  SC = c( "N",  "C" )
-
-  nthreads = 4
-
-  nprojections = 30
-  nposts = nrow(posteriors$X)
-
-  nsims = min( 200, nposts )
-
-  iss = sample.int( nposts, nsims )
-  sim = array( NA, dim=c( nsims, length(SC), nprojections ) )
-
-  istart = ifelse( is.null(istart), ndata, istart )
-
-  Nscaled = as.vector(posteriors$X[iss, au, istart])
-  K = as.vector(posteriors$K[iss,au])
-  N = Nscaled *  K
-
-  u0 = data.frame(
-    N = as.integer( trunc(N) ),
-    C = as.integer( rep(0, length(N))),
-    f = F[iss, au, istart],
-    b = posteriors$b[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-    m = posteriors$m[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-    theta = posteriors$theta[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-    K = as.integer( posteriors$K[iss, au] )
-  )
-
-  for (i in 1:nsims) {
-
-    sim[i,,]  = run( model=mparse(
-      transitions = ST,
-      compartments = SC,
-      gdata = c( K=u0$K[i], r=u0$r[i], f=u0$f[i] ),
-      u0 = u0[i, SC],
-      tspan = 1:nprojections
-      ), threads=nthreads
-    )@U[]
-
-  }
 
   vn = 1
   plot( 0,0, xlim=c(0, nprojections+1), ylim=range(sim[,vn,], na.rm=TRUE), type="n")

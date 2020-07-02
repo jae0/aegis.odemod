@@ -96,58 +96,64 @@ birth_death_fishing = function( selection="stan_code", ... ) {
     return(out)
   }
 
-  if (grepl("simulation", selection) {
+  if (grepl("stochastic_simulation", selection) {
 
     o = list(...)
     attach(o)  
 
-    ST = c(
-      "@ -> b*N  -> N" ,
-      "N -> d*(N/K)^(1+theta)*N -> @",
-      "N -> f*N -> C"
+    Xdim = dim(X)
+    nau = Xdim[1]
+    ntu = Xdim[2]
+    nsim = Xdim[3]
+
+    if (!exists("ST")) ST = c(
+      "@ -> b*X  -> X" ,
+      "X -> d*(X/K)^(1+theta)*X -> @",
+      "X -> f*X -> catch"
     )
-    SC = c( "N",  "C" )
+    
+    if (!exists("SC"))  SC = c( "X",  "catch" )
 
-    nthreads = 4
+    if (!exists("nthreads")) nthreads = 4
+    if (!exists("nprojections")) nprojections = 30
+    if (!exists("istart"))  istart = ntu
+    
+    nssims = min( 10, nsim )
+    iss = sample.int( nsim, nssims )
+    
+    sim = array( NA, dim=c( nssims, length(SC), nprojections, nau ) )
+    tspan = 1:nprojections 
 
-    nprojections = 30
-    nposts = nrow(posteriors$X)
+    for (iau in 1:nau) {
 
-    nsims = min( 200, nposts )
+      # posterior subset
+      aup = data.frame(
+        X = as.integer( trunc(abundance[iss, iau, istart]) ),
+        catch = as.integer( rep(0, length(X))),
+        f = f[iss, iau, istart],
+        b = g[iss, iau, istart], 
+        m = m[iss, iau, istart], 
+        theta = theta[iss, iau, istart], 
+        K = as.integer( K[iss, iau] )
+      )
 
-    iss = sample.int( nposts, nsims )
-    sim = array( NA, dim=c( nsims, length(SC), nprojections ) )
-
-    istart = ifelse( is.null(istart), ndata, istart )
-
-    Nscaled = as.vector(posteriors$X[iss, au, istart])
-    K = as.vector(posteriors$K[iss,au])
-    N = Nscaled *  K
-
-    u0 = data.frame(
-      N = as.integer( trunc(N) ),
-      C = as.integer( rep(0, length(N))),
-      f = F[iss, au, istart],
-      b = posteriors$b[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-      m = posteriors$m[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-      theta = posteriors$theta[iss, au, istart],  # note, BETA is conditioned on previous time step. .
-      K = as.integer( posteriors$K[iss, au] )
-    )
-
-    for (i in 1:nsims) {
-
-      sim[i,,]  = run( model=mparse(
-        transitions = ST,
-        compartments = SC,
-        gdata = c( K=u0$K[i], r=u0$r[i], f=u0$f[i] ),
-        u0 = u0[i, SC],
-        tspan = 1:nprojections
-        ), threads=nthreads
-      )@U[]
+      # simulate over each posterior subset
+      for (i in 1:nssims) {
+        sim[i,,iau]  = run( model=mparse(
+          transitions = ST,
+          compartments = SC,
+          gdata = c( K=aup$K[i], g=aup$g[i], m=aup$m[i], theta=aup$theta[i], f=aup$f[i] ),
+          u0 = aup[i, SC],
+          tspan = tspan
+          ), threads=nthreads
+        )@U[]
+      }
 
     }
     
     detach(o)
+    out = list( sim=sim, iss =iss)
+
     return(out)
   }
 
