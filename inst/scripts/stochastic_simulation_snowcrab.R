@@ -30,49 +30,43 @@
 
   # loadfunctions("aegis.odemod")
 
-  p$fishery_model = list()
-  p$fishery_model$method = "stan"  # "jags", etc.
-  p$fishery_model$outdir = file.path(project.datadirectory('bio.snowcrab'), "assessments", p$year.assessment )
-  p$fishery_model$fnres  = file.path(p$fishery_model$outdir, paste( "surplus.prod.mcmc", p$year.assessment, p$fishery_model$method, "rdata", sep=".") )
-
-  p$fishery_model$standata = numerical_abundance_catch(p, lag=1 )
-
-  # loadfunctions("aegis.odemod")
-
-  p$fishery_model$stancode = birth_death_fishing( "stan_code" )
-  p$fishery_model$stancode_compiled = rstan::stan_model( model_code=p$fishery_model$stancode )
-  # later:::ensureInitialized()  # solve mode error
-
+  standata = numerical_abundance_catch(p, lag=1 )
   if (0) {
     subset = c(1:10)
-    p$fishery_model$standata$IOA = p$fishery_model$standata$IOA[subset,]
-    p$fishery_model$standata$CAT = trunc( p$fishery_model$standata$CAT[subset,] )
-    p$fishery_model$standata$U = length(subset)  #
+    standata$IOA = standata$IOA[subset,]
+    standata$CAT = trunc( standata$CAT[subset,] )
+    standata$U = length(subset)  #
   }
 
+  stancode_compiled = rstan::stan_model( model_code=birth_death_fishing( "stan_code" ) )
+
   res = rstan::sampling(
-    p$fishery_model$stancode_compiled,
-    data=p$fishery_model$standata,
+    stancode_compiled,
+    data=standata,
     control = list(adapt_delta=0.925, max_treedepth=14),
     iter=6000,
     warmup=5000,
     refresh = 100,
-#    seed=123,
+#   seed=123,
     chains=3
   )
 
   posteriors = rstan::extract( res )  # posteriors = mcmc posteriors from STAN
  
-  # add other params of interest
+  # add other params computed post-mcmc from conditional distributions
   posteriors = c( 
     posteriors, 
-    birth_death_fishing( "extract", X=posteriors$X, K=posteriors$K, catch=p$fishery_model$standata$CAT )
+    birth_death_fishing( "extract", 
+      X=posteriors$X, 
+      K=posteriors$K, 
+      catch=standata$CAT 
+    )
   )
 
   sims = birth_death_fishing( "stochastic_simulation", 
     X=posteriors$abundance, 
     K=posteriors$K, 
-    catch=p$fishery_model$standata$CAT, 
+    catch=standata$CAT, 
     g=posteriors$g, 
     m=posteriors$m,
     f=posteriors$fishing.mortality 
@@ -80,50 +74,62 @@
   
 
   if (0){
-    fn = file.path(  "~", "tmp", "smallarea.rdata" )
-    save( res , file=fn, compress=TRUE )
-    load( fn )
+
+    outdir = file.path(project.datadirectory('bio.snowcrab'), "assessments", p$year.assessment )
+    
+    fn_root = paste( "birth_death_mcmc", "defaultgrid_smallarea", sep="." )
+
+    fnres  = file.path(outdir, paste( "res", fn_root, "rdata", sep=".") )
+    save( res , file=fnres, compress=TRUE )
+
+    fnsims  = file.path(outdir, paste( "sims", fn_root, "rdata", sep=".") )
+    save( sims , file=fnres, compress=TRUE )
+
+    load( fnres )
+    load( fnsims )
+
+    # ---------------------
 
     au = 1
     au = 2
 
     hist(posteriors$K[,au], "fd")
 
-      plot( posteriors$g ~ posteriors$m )
+    plot( posteriors$g ~ posteriors$m )
 
-      hist( posteriors$g - posteriors$m - posteriors$fishing.mortality)
+    hist( posteriors$g - posteriors$m - posteriors$fishing.mortality)
 
-      ny = dim(posteriors$fishing.mortality)[3]
-      plot(0,0, xlim=c(0, ny ), ylim=c(0,1.25), na.rm=TRUE, type="n")
-      for (sim in 1:dim(posteriors$fishing.mortality)[1]){
-        lines( posteriors$fishing.mortality[sim,au, ]  ~  c(1:ny), col=alpha(au, 0.05)  )
-      }
+    ny = dim(posteriors$fishing.mortality)[3]
+    plot(0,0, xlim=c(0, ny ), ylim=c(0,1.25), na.rm=TRUE, type="n")
+    for (sim in 1:dim(posteriors$fishing.mortality)[1]){
+      lines( posteriors$fishing.mortality[sim,au, ]  ~  c(1:ny), col=alpha(au, 0.05)  )
+    }
 
-      ny = dim(posteriors$g)[3]
-      plot( 0,0, xlim=c(0, ny ), ylim=c(0,1), na.rm=TRUE, type="n")
-      for (sim in 1:dim(posteriors$g)[1]){
-        lines( posteriors$g[sim,au, ] ~  c(1:ny), col=alpha(au, 0.05)  )
-      }
+    ny = dim(posteriors$g)[3]
+    plot( 0,0, xlim=c(0, ny ), ylim=c(0,1), na.rm=TRUE, type="n")
+    for (sim in 1:dim(posteriors$g)[1]){
+      lines( posteriors$g[sim,au, ] ~  c(1:ny), col=alpha(au, 0.05)  )
+    }
 
-      ny = dim(posteriors$m)[3]
-      plot(0,0, xlim=c(0, ny ), ylim=c(0,2), na.rm=TRUE, type="n")
-      for (sim in 1:dim(posteriors$m)[1]){
-        lines( posteriors$m[sim,au, ] ~  c(1:ny), col=alpha(au, 0.05)  )
-      }
+    ny = dim(posteriors$m)[3]
+    plot(0,0, xlim=c(0, ny ), ylim=c(0,2), na.rm=TRUE, type="n")
+    for (sim in 1:dim(posteriors$m)[1]){
+      lines( posteriors$m[sim,au, ] ~  c(1:ny), col=alpha(au, 0.05)  )
+    }
 
-      ny = dim(posteriors$r)[3]
-      plot(0,0, xlim=c(0, ny ), ylim=c(0,2), na.rm=TRUE, type="n")
-      for (sim in 1:dim(posteriors$r)[1]){
-        lines( posteriors$r[sim,au, ] ~  c(1:ny), col=alpha(au, 0.05)  )
-      }
+    ny = dim(posteriors$r)[3]
+    plot(0,0, xlim=c(0, ny ), ylim=c(0,2), na.rm=TRUE, type="n")
+    for (sim in 1:dim(posteriors$r)[1]){
+      lines( posteriors$r[sim,au, ] ~  c(1:ny), col=alpha(au, 0.05)  )
+    }
 
-      plot(0,0, xlim=range(posteriors$K[,au]), ylim=range(posteriors$r[,au,]), na.rm=TRUE, type="n")
-      for (tu in 1:dim(posteriors$r)[3]){
-        points( posteriors$r[,au,tu ] ~ posteriors$K[,au], col=alpha(tu, 0.1), pch=19, cex=0.6 )
-      }
+    plot(0,0, xlim=range(posteriors$K[,au]), ylim=range(posteriors$r[,au,]), na.rm=TRUE, type="n")
+    for (tu in 1:dim(posteriors$r)[3]){
+      points( posteriors$r[,au,tu ] ~ posteriors$K[,au], col=alpha(tu, 0.1), pch=19, cex=0.6 )
+    }
 
 
-    plot( p$fishery_model$standata$CAT[au,] ~ c(1:ny), ylim=range(c(posteriors$cat[,au,] * posteriors$K[,au])))
+    plot( standata$CAT[au,] ~ c(1:ny), ylim=range(c(posteriors$cat[,au,] * posteriors$K[,au])))
     for (i in 1:nposts) {
       lines( posteriors$cat[i,au,] * posteriors$K[i,au] ~ c(1:ny), col=alpha("orange", 0.01) )
     }
@@ -155,13 +161,13 @@
     
     ny = dim(posteriors$abundance)[3]
     nposts =dim(posteriors$abundance)[1]
-    plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$abundance[ ,au, ], posteriors$K[ ,au], p$fishery_model$standata$CAT[au,]), na.rm=TRUE), type="n")
+    plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$abundance[ ,au, ], posteriors$K[ ,au], standata$CAT[au,]), na.rm=TRUE), type="n")
     for (i in 1:nposts) {
       lines( posteriors$abundance[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
       abline( h=posteriors$K[i , au]), col=alpha("orange", 0.1) )
     }
-    lines( p$fishery_model$standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
-    lines( p$fishery_model$standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
+    lines( standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
+    lines( standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
     lines( apply( posteriors$abundance[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
     abline( h=median( posteriors$K[ , au]), col=alpha("orange", 0.9), lwd=4 )
 
@@ -208,7 +214,7 @@
   for (i in 1:nposts) {
     lines( abundance[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
   }
-  lines( p$fishery_model$standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99) )
+  lines( standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99) )
   lines( apply( abundance[ , au, ], 2, median) ~ c(1:ny), col=alpha("black", 0.99) )
   for (i in 1:nsims) {
     lines( sim[ i, vn, ] ~ c((ny+1):nyp), col=alpha("magenta", 0.1) )
