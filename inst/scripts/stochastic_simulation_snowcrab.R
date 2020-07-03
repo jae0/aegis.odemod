@@ -22,6 +22,9 @@
   p = bio.snowcrab::snowcrab_carstm( DS="parameters", assessment.years=2004:year.assessment )  # landings recorded by position since 2004
 
   crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
+
+  # p$boundingbox = list( xlim=p$corners$lon, ylim=p$corners$lat) # bounding box for plots using spplot
+
   sppoly = areal_units( p=p )  # will redo if not found
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
   # plot(sppoly)
@@ -40,7 +43,7 @@
 
   stancode_compiled = rstan::stan_model( model_code=birth_death_fishing( "stan_code" ) )
 
-  res = rstan::sampling(
+  stanresults = rstan::sampling(
     stancode_compiled,
     data=standata,
     control = list(adapt_delta=0.9, max_treedepth=14),
@@ -51,7 +54,7 @@
     chains=3
   )
 
-  posteriors = rstan::extract( res )  # posteriors = mcmc posteriors from STAN
+  posteriors = rstan::extract( stanresults )  # posteriors = mcmc posteriors from STAN
 
   # add other params computed post-mcmc from conditional distributions
   posteriors = c(
@@ -72,6 +75,32 @@
     f=posteriors$fishing.mortality
   )
 
+  vn = "X"
+  res = reformat_to_array( 
+    input=apply( posterior[[vn]], 1, median),
+    matchfrom = list( AUID=AUID, yr_factor=yr_factor),
+    matchto   = list( AUID=sppoly$AUID, yr_factor=factor(p$yrs) )
+  )
+      
+  vn = "fishing.mortality"
+  res = reformat_to_array( 
+    input=apply( sims[[vn,,1]], 1, median),
+    matchfrom = list( AUID=AUID, yr_factor=yr_factor),
+    matchto   = list( AUID=sppoly$AUID, yr_factor=factor(p$yrs) )
+  )
+   
+  res_dim = dim( res )
+  if (res_dim == 1 ) time_match = NULL
+  if (res_dim == 2 ) time_match = list(year="2000")
+  if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
+  
+  birth_death_fishing( "plot", p=p, res=res, vn=vn, time_match=time_match, sppoly=sppoly, sp.layout=p$coastLayout )
+
+
+
+   
+
+
 
   if (0){
 
@@ -79,8 +108,8 @@
 
     fn_root = paste( "birth_death_mcmc", "defaultgrid_smallarea", sep="." )
 
-    fnres  = file.path(outdir, paste( "res", fn_root, "rdata", sep=".") )
-    save( res , file=fnres, compress=TRUE )
+    fnres  = file.path(outdir, paste( "stanresults", fn_root, "rdata", sep=".") )
+    save( stanresults , file=fnres, compress=TRUE )
 
     fnsims  = file.path(outdir, paste( "sims", fn_root, "rdata", sep=".") )
     save( sims , file=fnres, compress=TRUE )
@@ -228,71 +257,6 @@
 
 
 
-  vn = paste(p$variabletomodel, "random_auid_spatial", sep=".")
-  if (exists(vn, res)) {
-    res_dim = dim( res[[vn]] )
-    if (res_dim == 1 ) time_match = NULL
-    if (res_dim == 2 ) time_match = list(year="2000")
-    if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
-    carstm_plot( p=p, res=res, vn=vn, time_match=time_match )
-  }
 
 
-
-
-  carstm_plot = function( p, res, vn, poly_match=NULL, time_match=NULL, sppoly=areal_units(p=p), breaksat=NULL, ...) {
-    # carstm/aegis wrapper around spplot
-    require(sp)
-    sppoly@data[,vn] = NA
-
-    # first index is spatial strata
-    data_dimensionality = length( dim(res[[vn]]) )
-
-    if (is.null(poly_match)) poly_match = match( res$AUID, sppoly[["AUID"]] )  # should match exactly but in case a subset is sent as sppoly
-
-    if (data_dimensionality==1) {
-      sppoly@data[, vn] = res[[vn]] [ poly_match ]  # year only
-    }
-
-    if (!is.null(time_match)) {
-      n_indexes = length( time_match )
-      if (data_dimensionality==2) {
-        if (n_indexes==1) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
-      }
-      if (data_dimensionality==3) {
-        if (n_indexes==1) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]] , ]  # year only
-        if (n_indexes==2) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
-      }
-    }
-
-
-    if (length(poly_match) > 1 ) {
-      dev.new();
-      p$boundingbox = list( xlim=p$corners$lon, ylim=p$corners$lat) # bounding box for plots using spplot
-      if ( exists("coastLayout", p)) {
-        sp.layout = p$coastLayout
-      } else {
-        sp.layout = aegis.coastline::coastline_layout(p=p, redo=TRUE)
-      }
-      if ( exists("mypalette", p)) {
-        mypalette = p$mypalette
-      } else {
-        mypalette = RColorBrewer::brewer.pal(9, "YlOrRd")
-      }
-      if ( is.null(breaksat)) breaksat=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
-
-      ellp = list(...)
-
-      if ( !exists("main", ellp ) )  ellp[["main"]]=vn
-      ellp$obj = sppoly
-      ellp$zcol=vn
-      ellp$col.regions=mypalette
-      ellp$at=breaksat
-      ellp$sp.layout=sp.layout
-      ellp$col="transparent"
-
-      do.call(spplot, ellp )
-
-    }
-  }
 

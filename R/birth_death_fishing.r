@@ -1,5 +1,5 @@
 
-birth_death_fishing = function( selection="stan_code", ... ) {
+birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly=NULL, poly_match=NULL, time_match=NULL, breaksat=NULL, coastLayout=NULL, ... ) {
 
 
   if (grepl("stan_code", selection) {
@@ -98,8 +98,8 @@ birth_death_fishing = function( selection="stan_code", ... ) {
 
   if (grepl("stochastic_simulation", selection) {
 
-    o = list(...)
-    attach(o)  
+    ellp = list(...)
+    attach(ellp)  
 
     Xdim = dim(X)
     nau = Xdim[1]
@@ -151,7 +151,7 @@ birth_death_fishing = function( selection="stan_code", ... ) {
 
     }
     
-    detach(o)
+    detach(ellp)
     out = list( sim=sim, iss =iss)
 
     return(out)
@@ -159,8 +159,8 @@ birth_death_fishing = function( selection="stan_code", ... ) {
 
   if (grepl("extract", selection) {
     
-    o = list(...)
-    attach(o)  
+    ellp = list(...)
+    attach(ellp)  
 
     Xdim = dim(X)
     nau = Xdim[1]
@@ -188,8 +188,63 @@ birth_death_fishing = function( selection="stan_code", ... ) {
       fraction.fished=fraction.fished 
     )
 
-    detach(o)
+    detach(ellp)
     return( out )
   }
+
+
+  if (grepl("plot", selection) {
+    #  wrapper around spplot .. based on carstm_plot
+    require(sp)
+
+    ellp =list(...)   # if plotting, all ellipsis contents are expected to be sppolt args
+
+    if (is.null(vn)) stop("must have a  vn object")
+    if (is.null(res)) stop("must have a  res object")
+    if (is.null(sppoly)) stop("must have an sppoly object")
+
+    sppoly@data[,vn] = NA
+
+    # first index is spatial strata
+    data_dimensionality = length( dim(res[[vn]]) )
+
+    if (is.null(poly_match)) poly_match = match( res$AUID, sppoly[["AUID"]] )  # should match exactly but in case a subset is sent as sppoly
+
+    if (data_dimensionality==1) {
+      sppoly@data[, vn] = res[[vn]] [ poly_match ]  # year only
+    }
+
+    if (!is.null(time_match)) {
+      n_indexes = length( time_match )
+      if (data_dimensionality==2) {
+        if (n_indexes==1) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
+      }
+      if (data_dimensionality==3) {
+        if (n_indexes==1) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]] , ]  # year only
+        if (n_indexes==2) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
+      }
+    }
+
+    if (length(poly_match) > 1 ) {
+      
+      dev.new();
+ 
+      if ( !exists("mypalette", ellp)) mypalette = RColorBrewer::brewer.pal(9, "YlOrRd")
+
+      if ( is.null(breaksat)) breaksat=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
+
+      if ( !exists("main", ellp ) )  ellp[["main"]]=vn
+      ellp$obj = sppoly
+      ellp$zcol=vn
+      ellp$col.regions=mypalette
+      ellp$at=breaksat
+      ellp$col="transparent"
+
+      do.call(spplot, ellp )
+
+    }
+
+  }
+
 
 }
