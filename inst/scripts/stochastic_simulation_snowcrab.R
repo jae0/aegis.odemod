@@ -76,15 +76,17 @@
   )
 
   vn = "X"
+  vn = "fishing.mortality"
   res = reformat_to_array( 
     input=apply( posterior[[vn]], 1, median),
     matchfrom = list( AUID=AUID, yr_factor=yr_factor),
     matchto   = list( AUID=sppoly$AUID, yr_factor=factor(p$yrs) )
   )
       
-  vn = "fishing.mortality"
+  isu = 1 # X state
+  itu = 1 # time units
   res = reformat_to_array( 
-    input=apply( sims[[vn,,1]], 1, median),
+    input=apply( sims[[,1,1]], 1, median),
     matchfrom = list( AUID=AUID, yr_factor=yr_factor),
     matchto   = list( AUID=sppoly$AUID, yr_factor=factor(p$yrs) )
   )
