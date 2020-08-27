@@ -5,6 +5,8 @@
 # use numerical abundance for small area analysis .. n<1000 preferable ..
 # 03.snowcrab... or comparable must has been completed .. ie carstm model
 
+--- NOTE --- add R1 and this becomes delay difference ...
+--- NOTE --- simulations not complete ,.. waiting for model form to be finalized ....
 
   require(SimInf)
   require(ggplot2)
@@ -17,7 +19,6 @@
 
 
   year.assessment = 2019
-
 
   p = bio.snowcrab::snowcrab_carstm( DS="parameters", assessment.years=2004:year.assessment )  # landings recorded by position since 2004
 
@@ -32,8 +33,10 @@
 
 
   # loadfunctions("aegis.odemod")
+  # loadfunctions("ecomod")
 
-  standata = numerical_abundance_catch(p, lag=1 )
+  standata = numerical_abundance_catch( p  )
+
   if (0) {
     subset = c(1:10)
     standata$IOA = standata$IOA[subset,]
@@ -43,31 +46,70 @@
 
   stancode_compiled = rstan::stan_model( model_code=birth_death_fishing( "stan_code" ) )
 
-  stanresults = rstan::sampling(
+  res = rstan::sampling(
     stancode_compiled,
-    data=standata,
-    control = list(adapt_delta=0.9, max_treedepth=14),
+    data=standata[c("N", "U", "IOA", "CAT")],
+    control = list(adapt_delta=0.9, max_treedepth=15),
     iter=5000,
     warmup=4000,
     refresh = 100,
 #   seed=123,
-    chains=3
+    chains=4
   )
 
-  posteriors = rstan::extract( stanresults )  # posteriors = mcmc posteriors from STAN
 
-  # add other params computed post-mcmc from conditional distributions
-  posteriors = c(
-    posteriors,
-    birth_death_fishing( "extract",
-      X=posteriors$X,
-      K=posteriors$K,
-      catch=standata$CAT
-    )
-  )
+  if (0){
+    outdir = file.path(project.datadirectory('bio.snowcrab'), "assessments", p$year.assessment )
+    fn_root = paste( "birth_death_mcmc", "defaultgrid_smallarea", sep="." )
+    fnres  = file.path(outdir, paste( "res", fn_root, "rdata", sep=".") )
+    save( res , file=fnres, compress=TRUE )
+    load( fnres )
+  }
+
+  posteriors = birth_death_fishing( selection="posteriors", res=res, wgts=standata$wgts, catches=standata$CAT )
+
+  res_summ = birth_death_fishing( selection="summary", posterior=posteriors, sppoly=sppoly )
+  res_summ$yrs = p$yrs
+
+  vn = "cfaall"
+  vn = "cfanorth"
+  vn = "cfasouth"
+  vn = "cfa4x"
+
+  plot(res_summ[,vn] ~ res_summ$yrs, type="b", col="darkorange", pch=20 )
+  lines(res_summ[, paste(vn, "lb", sep="_")] ~ res_summ$yrs, col="slateblue", lty="dotted")
+  lines(res_summ[, paste(vn, "ub", sep="_")] ~ res_summ$yrs, col="slateblue", lty="dotted")
+
+
+  iyr = which(p$yrs== 2019)
+  vn = "fishing.mortality";  spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn="biomass"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn="X"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)  # normalized numerical abundance
+  vn="fraction.fished"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn="g"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+
+  vn="g_ar"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,1]); spplot(sppoly, vn)
+
+
+  vn="K"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="m"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="theta"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="q"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
+
+
+
+  # time_match = list(year="2000")
+  # time_match = list(year="2000", dyear="0.8" )
+
+  spmatrix = apply( posteriors[[vn]], c(2,3), median)
+
+  birth_death_fishing( "spplot", p=p, spmatrix=spmatrix, vn=vn, time_match=time_match, sppoly=sppoly, sp.layout=p$coastLayout )
+
+
+# ------------simulations
 
   sims = birth_death_fishing( "stochastic_simulation",
-    X=posteriors$abundance,
+    posteriors=posteriors$numbers,
     K=posteriors$K,
     catch=standata$CAT,
     g=posteriors$g,
@@ -75,49 +117,34 @@
     f=posteriors$fishing.mortality
   )
 
-  vn = "X"
-  vn = "fishing.mortality"
-  res = reformat_to_array( 
-    input=apply( posterior[[vn]], 1, median),
-    matchfrom = list( AUID=AUID, yr_factor=yr_factor),
-    matchto   = list( AUID=sppoly$AUID, yr_factor=factor(p$yrs) )
-  )
-      
+
+  if (0){
+    outdir = file.path(project.datadirectory('bio.snowcrab'), "assessments", p$year.assessment )
+    fnsims  = file.path(outdir, paste( "sims", fn_root, "rdata", sep=".") )
+    save( sims , file=fnres, compress=TRUE )
+    load( fnsims )
+  }
+
+
   isu = 1 # X state
   itu = 1 # time units
-  res = reformat_to_array( 
+  spmatrix = reformat_to_array(
     input=apply( sims[[,1,1]], 1, median),
     matchfrom = list( AUID=AUID, yr_factor=yr_factor),
     matchto   = list( AUID=sppoly$AUID, yr_factor=factor(p$yrs) )
   )
-   
-  res_dim = dim( res )
-  if (res_dim == 1 ) time_match = NULL
-  if (res_dim == 2 ) time_match = list(year="2000")
-  if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
-  
-  birth_death_fishing( "plot", p=p, res=res, vn=vn, time_match=time_match, sppoly=sppoly, sp.layout=p$coastLayout )
+
+  # time_match = list(year="2000")
+  # time_match = list(year="2000", dyear="0.8" )
+
+  birth_death_fishing( "plot", p=p, spmatrix=sim_array, vn=vn, time_match=time_match, sppoly=sppoly, sp.layout=p$coastLayout )
 
 
 
-   
 
 
 
   if (0){
-
-    outdir = file.path(project.datadirectory('bio.snowcrab'), "assessments", p$year.assessment )
-
-    fn_root = paste( "birth_death_mcmc", "defaultgrid_smallarea", sep="." )
-
-    fnres  = file.path(outdir, paste( "stanresults", fn_root, "rdata", sep=".") )
-    save( stanresults , file=fnres, compress=TRUE )
-
-    fnsims  = file.path(outdir, paste( "sims", fn_root, "rdata", sep=".") )
-    save( sims , file=fnres, compress=TRUE )
-
-    load( fnres )
-    load( fnsims )
 
     # ---------------------
 
@@ -179,6 +206,14 @@
     hist(posteriors$thetasd[,au], "fd")
 
 
+ny = dim(posteriors$numbers)[3]
+nposts =dim(posteriors$numbers)[1]
+nau=dim(posteriors$numbers)[2]
+
+
+for (au in 1:nau) {
+  print(au)
+
     nposts =dim(posteriors$X)[1]
     ny = dim(posteriors$X)[3]
     plot( 0,0, xlim=c(0, ny ), ylim=c(0, 1.1), type="n")
@@ -187,21 +222,26 @@
     }
     lines( apply( posteriors$X[ , au, ], 2, median) ~ c(1:ny), col=alpha("black", 0.99) )
 
+  u = readline()
+}
 
 
+# nposts=500
 
-    ny = dim(posteriors$abundance)[3]
-    nposts =dim(posteriors$abundance)[1]
-    plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$abundance[ ,au, ], posteriors$K[ ,au], standata$CAT[au,]), na.rm=TRUE), type="n")
-    for (i in 1:nposts) {
-      lines( posteriors$abundance[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
-      abline( h=posteriors$K[i , au]), col=alpha("orange", 0.1) )
-    }
-    lines( standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
-    lines( standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
-    lines( apply( posteriors$abundance[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
-    abline( h=median( posteriors$K[ , au]), col=alpha("orange", 0.9), lwd=4 )
+for (au in 1:nau) {
+  print(au)
 
+  plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$numbers[ ,au, ], posteriors$K[ ,au], standata$CAT[au,]), na.rm=TRUE), type="n")
+  for (i in 1:nposts) {
+    lines( posteriors$numbers[ i, au, ] ~ c(1:ny), col=alpha("green", 0.25) )
+    abline( h=posteriors$K[i , au], col=alpha("orange", 0.1) )
+  }
+  lines( standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
+  lines( standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
+  lines( apply( posteriors$numbers[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
+  abline( h=median( posteriors$K[ , au]), col=alpha("blue", 0.9), lwd=4 )
+
+   u = readline()
 
   }
 
@@ -237,7 +277,7 @@
 
 
   au = 1
-  ny = dim(abundance)[3]
+  ny = dim(numbers)[3]
   nposts = dim(abundance)[1]
 
   nyp = ny + nprojections
