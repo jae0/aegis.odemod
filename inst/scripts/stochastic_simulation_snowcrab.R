@@ -18,9 +18,35 @@
   # loadfunctions("aegis.odemod")
 
 
-  year.assessment = 2019
+  year.assessment = 2019   # NOTE: for 4X, the season 2019-2020 -> 2019
 
-  p = bio.snowcrab::snowcrab_carstm( DS="parameters", assessment.years=2004:year.assessment )  # landings recorded by position since 2004
+  p = bio.snowcrab::load.environment(
+    year.assessment=year.assessment,
+    assessment_years = 2004:year.assessment,
+    vars.tomodel="R0.mass",
+    modeldir = project.datadirectory("bio.snowcrab", "modelled", "testing" ),  ## <--- important: alter save location for this  .. default is "*/modelled"
+
+    areal_units_timeperiod="default",
+    areal_units_overlay="snowcrab_managementareas",
+
+    areal_units_resolution_km = 1,
+    #areal_units_resolution_km = 10,
+    #areal_units_resolution_km = 25,
+    # areal_units_source = "lattice",
+    areal_units_source = "snowcrab_polygons_tesselation",
+    areal_units_constraint_nmin= 10,
+    # using alt biomass index estmates
+    # carstm_model_label="production",
+    # carstm_model_label = paste( "testing", areal_units_source, areal_units_resolution_km, areal_units_constraint_nmin, sep="_" ),
+    # carstm_model_label="testing_lattice_10_10",
+    # carstm_model_label="testing_lattice_25_3",
+    # carstm_model_label="testing_snowcrab_polygons_tesselation_1_10",
+    carstm_model_label="testing_snowcrab_polygons_tesselation_1_10_zeroinflated",
+    # carstm_model_label="testing_snowcrab_polygons_tesselation_1_4",
+    carstm_modelengine = "inla",
+    libs="carstm"
+  )
+
 
   crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 

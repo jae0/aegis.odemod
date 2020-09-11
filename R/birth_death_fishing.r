@@ -4,7 +4,7 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
 
   if (grepl("stan_code", selection) ) {
 
-    # simple discrete ode form, spatially explicit (au), logistic, birth/death separated
+    # simple discrete ode form, spatially explicit (au), birth/death separated
     # n[au,t] = n [au,t−1] + b[au] n[au,t−1] (1 − b[au,t−1]  ) − c [au,t−1]
 
     out = "
@@ -73,6 +73,95 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
     "
     return(out)
   }
+
+
+  if (grepl("stan_code_testing_hurdle", selection) ) {
+
+    # simple discrete ode form, spatially explicit (au), birth/death separated
+    # n[au,t] = n [au,t−1] + b[au] n[au,t−1] (1 − b[au,t−1]  ) − c [au,t−1]
+
+    out = "
+      functions {
+        int num_zero(int[] y) { // count no of zero-values
+          int nz = 0;
+          for (n in 1:size(y))
+            if (y[n] == 0)
+              nz += 1;
+          return nz;
+        }
+      }
+
+      data {
+        int<lower=0> N; // no. years
+        int<lower=0> U; // no. regions
+        int CAT[U,N];
+        int IOA[U,N];
+      }
+
+      transformed data {
+        real eps = 1e-12;
+        real IOAmin[U];
+        real IOAmax[U];
+        real IOAmed[U];
+        real IOAerror[U];
+        int<lower=0 > N0[U]; // no of zero-values in each au
+        int<lower=0 > Ngt0[U];  // no of non-zero values in each au
+        int<lower=1> IOA_nz[U], N - num_zero(y);  // values of IOA > 0
+        for (u in 1:U) {
+          N0[u] = num_zero( IOA[u,] );
+          Ngt0[u] = N - N0[u];
+          IOAmax[u] = 1e-12;
+          IOAmin[u] = 1e12;
+          for (n in 1:N) {
+            real test = IOA[u,n] + CAT[u,n] ;
+            if (test > IOAmax[u]) IOAmax[u] = test;
+            if (test <= IOAmin[u]) IOAmin[u] = test;
+          }
+          IOAmed[u] = (IOAmax[u] + IOAmin[u])/2.0 ;
+          IOAerror[u] = IOAmax[u] * 0.05 ; // 5% error..  estim of sd
+        }
+      }
+
+      parameters {
+        real <lower=eps, upper=1.0> X[U,N];
+        real <lower=0.0> g[U,N];
+        real <lower=0.0, upper=0.5> m[U];
+        real <lower=1.0> K[U];
+        real <lower=0.0, upper=0.5>  psd[U];  // process error
+        real <lower=0.0, upper=1.0> res[U,N];
+        real <lower=0.0, upper=0.5>  ressd[U];  /////
+        real <lower=0.0, upper=1.0>  gsd[U]; /////
+        real <lower=0.5, upper=1.5>   q[U];
+        real <lower=0.0, upper=0.5>   msd; ////
+        real <lower=0.0, upper=0.2>   qsd;
+      }
+
+      model {
+        psd ~ normal(0.0, 0.2) ;
+        qsd ~ normal(0.0, 0.05);  // ranges from 0.5 to 1.5
+        ressd ~ normal(0.0, 0.05) ;
+        msd ~ normal(0.0, 0.05) ;
+        gsd ~ normal(0.0, 0.05) ; // 0.1
+        m ~ normal(0.0, msd);
+        q ~ normal(1.0, qsd );
+
+        for (u in 1:U) {
+          g[u,] ~ normal( 0.0, gsd[u] );
+          K[u] ~ normal( IOAmax[u], IOAerror[u] ) ;
+          X[u,1] ~ normal( 0.5, psd[u] ) ;
+          for (n in 1:N) {
+            res[u,n] ~ normal( q[u] * (X[u,n] - CAT[u,n]/K[u] ), ressd[u] );  // no catch observation error  .. keep separate to force positive value
+            IOA[u,n] ~ poisson( K[u] * res[u,n] ); // survey index observation model
+            if (n < N) {
+              X[u,n+1] ~ normal( X[u,n] * (1.0 + g[u,n] - m[u]*X[u,n] ) - CAT[u,n]/K[u], psd[u] ) ; //process model
+            }
+          }
+        }
+      }
+    "
+    return(out)
+  }
+
 
   if (grepl("stochastic_simulation", selection) ) {
 
