@@ -15,7 +15,8 @@
   require(aegis)
   require(bio.snowcrab)
   # require(aegis.odemod)
-  # loadfunctions("aegis.odemod")
+  loadfunctions("aegis.odemod")
+  loadfunctions("ecomod")
 
 
   year.assessment = 2019   # NOTE: for 4X, the season 2019-2020 -> 2019
@@ -58,9 +59,6 @@
   # spplot( sppoly, "au_sa_km2", main="AUID", sp.layout=p$coastLayout )
 
 
-  # loadfunctions("aegis.odemod")
-  # loadfunctions("ecomod")
-
   standata = numerical_abundance_catch( p  )
 
   if (0) {
@@ -75,12 +73,12 @@
   res = rstan::sampling(
     stancode_compiled,
     data=standata[c("N", "U", "IOA", "CAT")],
-    control = list(adapt_delta=0.9, max_treedepth=15),
+    control = list(adapt_delta=0.95, max_treedepth=16),
     iter=5000,
     warmup=4000,
     refresh = 100,
 #   seed=123,
-    chains=4
+    chains=3
   )
 
 

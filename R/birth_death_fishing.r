@@ -1,6 +1,16 @@
 
 birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly=NULL, poly_match=NULL, time_match=NULL, breaksat=NULL, coastLayout=NULL, catches=NULL, wgts=NULL, ... ) {
 
+  message(" ")
+  message("todo :: use carstm estimated numbers as IOA")
+  message("todo :: add zero-inflation")
+  message(" ")
+
+  if (grepl("parameters", selection) ) {
+
+    return(params)
+  }
+
 
   if (grepl("stan_code", selection) ) {
 
