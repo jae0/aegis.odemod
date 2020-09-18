@@ -8,6 +8,7 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
 
   if (grepl("parameters", selection) ) {
 
+
     return(params)
   }
 
