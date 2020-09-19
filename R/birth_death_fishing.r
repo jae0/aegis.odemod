@@ -216,14 +216,14 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
 
       # simulate over each posterior subset
       for (i in 1:nssims) {
-        sim[i,,iau]  = run( model=mparse(
+        sim[i,,iau]  = slot( run( model=mparse(
           transitions = ST,
           compartments = SC,
           gdata = c( K=aup$K[i], g=aup$g[i], m=aup$m[i], f=aup$f[i] ),
           u0 = aup[i, SC],
           tspan = tspan
           ), threads=nthreads
-        )@U[]
+        ), "U")[]
       }
 
     }
@@ -346,7 +346,7 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
     if (is.null(spmatrix)) stop("must have a  spmatrix object")
     if (is.null(sppoly)) stop("must have an sppoly object")
 
-    sppoly@data[,vn] = NA
+    slot(sppoly, "data")[,vn] = NA
 
     # first index is spatial strata
 
@@ -364,17 +364,17 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
 
     data_dimensionality = length( dim(spmatrix[[vn]]) )
     if (data_dimensionality==1) {
-      sppoly@data[, vn] = spmatrix[[vn]] [ i_poly ]  # year only
+      slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly ]  # year only
     }
 
     if (!is.null(time_match)) {
       n_indexes = length( time_match )
       if (data_dimensionality==2) {
-        if (n_indexes==1) sppoly@data[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] ]  # year only
+        if (n_indexes==1) slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] ]  # year only
       }
       if (data_dimensionality==3) {
-        if (n_indexes==1) sppoly@data[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] , ]  # year only
-        if (n_indexes==2) sppoly@data[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]], time_match[[2]] ] # year/subyear
+        if (n_indexes==1) slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] , ]  # year only
+        if (n_indexes==2) slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]], time_match[[2]] ] # year/subyear
       }
     }
 

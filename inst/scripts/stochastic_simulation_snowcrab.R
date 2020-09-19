@@ -106,19 +106,19 @@
 
 
   iyr = which(p$yrs== 2019)
-  vn = "fishing.mortality";  spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
-  vn="biomass"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
-  vn="X"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)  # normalized numerical abundance
-  vn="fraction.fished"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
-  vn="g"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn = "fishing.mortality";  spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn="biomass"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn="X"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)  # normalized numerical abundance
+  vn="fraction.fished"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn="g"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
 
-  vn="g_ar"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly@data[,vn] = (spmatrix[,1]); spplot(sppoly, vn)
+  vn="g_ar"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,1]); spplot(sppoly, vn)
 
 
-  vn="K"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
-  vn="m"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
-  vn="theta"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
-  vn="q"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly@data[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="K"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="m"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="theta"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="q"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
 
 
 
