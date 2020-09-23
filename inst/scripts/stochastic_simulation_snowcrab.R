@@ -5,8 +5,8 @@
 # use numerical abundance for small area analysis .. n<1000 preferable ..
 # 03.snowcrab... or comparable must has been completed .. ie carstm model
 
---- NOTE --- add R1 and this becomes delay difference ...
---- NOTE --- simulations not complete ,.. waiting for model form to be finalized ....
+#--- NOTE --- add R1 and this becomes delay difference ...
+#--- NOTE --- simulations not complete ,.. waiting for model form to be finalized ....
 
   require(SimInf)
   require(ggplot2)
@@ -64,7 +64,7 @@
   if (0) {
     subset = c(1:10)
     standata$IOA = standata$IOA[subset,]
-    standata$CAT = trunc( standata$CAT[subset,] )
+    standata$CAT = floor( standata$CAT[subset,] )
     standata$U = length(subset)  #
   }
 

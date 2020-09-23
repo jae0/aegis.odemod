@@ -206,7 +206,7 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
 
       # posterior subset
       aup = data.frame(
-        X = as.integer( trunc(abundance[iss, iau, istart]) ),
+        X = as.integer( floor(abundance[iss, iau, istart]) ),
         catch = as.integer( rep(0, length(X))),
         f = f[iss, iau, istart],
         b = g[iss, iau, istart],
