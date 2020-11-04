@@ -49,7 +49,7 @@
   )
 
 
-  crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
+  crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
 
   # p$boundingbox = list( xlim=p$corners$lon, ylim=p$corners$lat) # bounding box for plots using spplot
 
