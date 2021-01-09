@@ -26,19 +26,17 @@
     assessment_years = 2004:year.assessment,
     vars.tomodel="R0.mass",
     modeldir = project.datadirectory("bio.snowcrab", "modelled", "testing" ),  ## <--- important: alter save location for this  .. default is "*/modelled"
-
-    areal_units_timeperiod="default",
     areal_units_overlay="snowcrab_managementareas",
 
     areal_units_resolution_km = 1,
     #areal_units_resolution_km = 10,
     #areal_units_resolution_km = 25,
-    # areal_units_source = "lattice",
-    areal_units_source = "snowcrab_polygons_tesselation",
+    # areal_units_type = "lattice",
+    areal_units_type = "tesselation",
     areal_units_constraint_nmin= 10,
     # using alt biomass index estmates
     # carstm_model_label="production",
-    # carstm_model_label = paste( "testing", areal_units_source, areal_units_resolution_km, areal_units_constraint_nmin, sep="_" ),
+    # carstm_model_label = paste( "testing", areal_units_type, areal_units_resolution_km, areal_units_constraint_nmin, sep="_" ),
     # carstm_model_label="testing_lattice_10_10",
     # carstm_model_label="testing_lattice_25_3",
     # carstm_model_label="testing_snowcrab_polygons_tesselation_1_10",
