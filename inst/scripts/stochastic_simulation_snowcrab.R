@@ -36,12 +36,7 @@
     areal_units_constraint_nmin= 10,
     # using alt biomass index estmates
     # carstm_model_label="production",
-    # carstm_model_label = paste( "testing", areal_units_type, areal_units_resolution_km, areal_units_constraint_nmin, sep="_" ),
-    # carstm_model_label="testing_lattice_10_10",
-    # carstm_model_label="testing_lattice_25_3",
-    # carstm_model_label="testing_snowcrab_polygons_tesselation_1_10",
-    carstm_model_label="testing_snowcrab_polygons_tesselation_1_10_zeroinflated",
-    # carstm_model_label="testing_snowcrab_polygons_tesselation_1_4",
+    carstm_model_label="testing",
     carstm_modelengine = "inla",
     libs="carstm"
   )
