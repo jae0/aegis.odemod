@@ -120,7 +120,13 @@
 
   spmatrix = apply( posteriors[[vn]], c(2,3), median)
 
-  birth_death_fishing( "spplot", p=p, spmatrix=spmatrix, vn=vn, time_match=time_match, sppoly=sppoly, sp.layout=p$coastLayout )
+  birth_death_fishing( "spplot", p=p, spmatrix=spmatrix, vn=vn, time_match=time_match, 
+    sp.layout=p$coastLayout, 
+    # at = seq(... ) ,
+    sp.layout = p$coastLayout, 
+    col.regions = p$mypalette, 
+    main=vn
+  )
 
 
 # ------------simulations

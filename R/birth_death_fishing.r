@@ -1,5 +1,5 @@
 
-birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly=NULL, poly_match=NULL, time_match=NULL, breaksat=NULL, coastLayout=NULL, catches=NULL, wgts=NULL, ... ) {
+birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly=NULL, poly_match=NULL, time_match=NULL, catches=NULL, wgts=NULL, ... ) {
 
   message(" ")
   message("todo :: use carstm estimated numbers as IOA")
@@ -336,8 +336,9 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
   if (grepl("spplot", selection) ) {
 
 
-
-    #  wrapper around spplot .. based on carstm_plot
+    sppoly = as(sppoly, "Spatial")
+    # TODO move to sf
+    #  wrapper around spplot .. based on carstm_map
     require(sp)
 
     ellp =list(...)   # if plotting, all ellipsis contents are expected to be sppolt args
@@ -382,15 +383,9 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
 
       dev.new();
 
-      if ( !exists("mypalette", ellp)) mypalette = RColorBrewer::brewer.pal(9, "YlOrRd")
-
-      if ( is.null(breaksat)) breaksat=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
-
       if ( !exists("main", ellp ) )  ellp[["main"]]=vn
       ellp$obj = sppoly
       ellp$zcol=vn
-      ellp$col.regions=mypalette
-      ellp$at=breaksat
       ellp$col="transparent"
 
       do.call(spplot, ellp )
