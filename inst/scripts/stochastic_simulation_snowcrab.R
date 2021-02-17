@@ -1,6 +1,11 @@
 
 
 # stochastic simulation (birth-death) model of population dynamics
+# this continues from 03.abundance estimation.carstm.R .. but uses alt methods ..
+# it would be a replacement of 05.*
+
+# WARNING:: if the polygons are not optimal this can take many days to complete
+
 
 # use numerical abundance for small area analysis .. n<1000 preferable ..
 # 03.snowcrab... or comparable must has been completed .. ie carstm model
@@ -19,26 +24,15 @@
   loadfunctions("ecomod")
 
 
-  year.assessment = 2019   # NOTE: for 4X, the season 2019-2020 -> 2019
+  year.assessment = 2020   # NOTE: for 4X, the season 2019-2020 -> 2019
 
-  p = bio.snowcrab::load.environment(
-    year.assessment=year.assessment,
-    assessment_years = 2004:year.assessment,
-    vars.tomodel="R0.mass",
-    modeldir = project.datadirectory("bio.snowcrab", "modelled", "testing" ),  ## <--- important: alter save location for this  .. default is "*/modelled"
-    areal_units_overlay="snowcrab_managementareas",
+  p = bio.snowcrab::snowcrab_parameters( project_class="carstm", assessment.years=1999:year.assessment )
 
-    areal_units_resolution_km = 1,
-    #areal_units_resolution_km = 10,
-    #areal_units_resolution_km = 25,
-    # areal_units_type = "lattice",
-    areal_units_type = "tesselation",
-    areal_units_constraint_nmin= 10,
-    # using alt biomass index estmates
-    # carstm_model_label="production",
-    carstm_model_label="testing",
-    carstm_modelengine = "inla",
-    libs="carstm"
+  if (0) {
+    p$modeldir = project.datadirectory("bio.snowcrab", "modelled", "testing" ),  ## <--- important: alter save location for this  .. default is "*/modelled"
+    p$areal_units_resolution_km = 1
+    p$areal_units_type = "tesselation"
+    carstm_model_label="testing"
   )
 
 
