@@ -2,7 +2,7 @@
 
 # stochastic simulation (birth-death) model of population dynamics
 # this continues from 03.abundance estimation.carstm.R .. but uses alt methods ..
-# it would be a replacement of 05.*
+# it would be a replbacement of 05.*
 
 # WARNING:: if the polygons are not optimal this can take many days to complete
 
@@ -24,15 +24,18 @@
   loadfunctions("ecomod")
 
 
-  year.assessment = 2020   # NOTE: for 4X, the season 2019-2020 -> 2019
-
-  p = bio.snowcrab::snowcrab_parameters( project_class="carstm", assessment.years=1999:year.assessment )
-
   if (0) {
-    p$modeldir = project.datadirectory("bio.snowcrab", "modelled", "testing" ),  ## <--- important: alter save location for this  .. default is "*/modelled"
-    p$areal_units_resolution_km = 1
-    p$areal_units_type = "tesselation"
-    carstm_model_label="testing"
+
+    year.assessment = 2020
+
+    p = bio.snowcrab::snowcrab_parameters( 
+      project_class="carstm", 
+      assessment.years=2000:year.assessment, 
+      areal_units_type="tesselation",
+      carstm_model_label = "tesselation",   # default is the name of areal_units_type  
+      selection = list(type = "number")
+    )
+    
   )
 
 
@@ -45,6 +48,8 @@
   # plot(sppoly)
   # spplot( sppoly, "au_sa_km2", main="AUID", sp.layout=p$coastLayout )
 
+	color_scheme_set("brightblue") 
+
 
   standata = numerical_abundance_catch( p  )
 
@@ -55,29 +60,73 @@
     standata$U = length(subset)  #
   }
 
-  stancode_compiled = rstan::stan_model( model_code=birth_death_fishing( "stan_code" ) )
+  mod = stan_initialize( stan_code=birth_death_fishing( "stan_code" ) )
+  mod$compile()
 
-  res = rstan::sampling(
-    stancode_compiled,
-    data=standata[c("N", "U", "IOA", "CAT")],
-    control = list(adapt_delta=0.95, max_treedepth=16),
-    iter=5000,
-    warmup=4000,
-    refresh = 100,
-#   seed=123,
-    chains=3
+  mod_data = standata[c("N", "U", "IOA", "CAT")]
+
+  # see https://mc-stan.org/cmdstanr/reference/model-method-sample.html for more options
+  fit = mod$sample(
+    data = mod_data,
+    iter_warmup = 2000,
+    iter_sampling = 500,
+    seed = 123,
+    chains = 3,
+    parallel_chains = 3,  # The maximum number of MCMC chains to run in parallel.
+    max_treedepth = 14,
+    adapt_delta = 0.9,
+    refresh = 500
   )
 
+
+
+      if (0) {
+
+        fit = fishery_model( p=p, DS="fit", tag=p$areal_units_type )  # to get samples
+      
+        print( fit, max_rows=30 )
+        # fit$summary("K", "r", "q")
+        
+        fit$cmdstan_diagnose()
+        fit$cmdstan_summary()
+  
+          # (penalized) maximum likelihood estimate (MLE) 
+        fit_mle = mod$optimize(data =mod_data, seed = 123)
+        fit_mle$summary( c("K", "r", "q") )
+
+        mcmc_hist(fit$draws("K")) +
+          vline_at(fit_mle$mle(), size = 1.5)
+
+        # Variational Bayes  
+        fit_vb = mod$variational(data =mod_data, seed = 123, output_samples = 4000)
+        fit_vb$summary(c("K", "r", "q"))
+
+        bayesplot_grid(
+          mcmc_hist(fit$draws("K"), binwidth = 0.025),
+          mcmc_hist(fit_vb$draws("K"), binwidth = 0.025),
+          titles = c("Posterior distribution from MCMC", "Approximate posterior from VB")
+        )
+
+      }
+
+ 
+
+      color_scheme_set("gray")
+      mcmc_dens(fit$mcmc, regex_pars="K",  facet_args = list(nrow = 3, labeller = ggplot2::label_parsed ) ) + facet_text(size = 14 )   
+      # mcmc_hist( fit$draws("K"))
+
+
+   
 
   if (0){
     outdir = file.path(project.datadirectory('bio.snowcrab'), "assessments", p$year.assessment )
     fn_root = paste( "birth_death_mcmc", "defaultgrid_smallarea", sep="." )
-    fnres  = file.path(outdir, paste( "res", fn_root, "rdata", sep=".") )
-    save( res , file=fnres, compress=TRUE )
+    fnres  = file.path(outdir, paste( "fit", fn_root, "rdata", sep=".") )
+    save( fit , file=fnres, compress=TRUE )
     load( fnres )
   }
 
-  posteriors = birth_death_fishing( selection="posteriors", res=res, wgts=standata$wgts, catches=standata$CAT )
+  posteriors = birth_death_fishing( selection="posteriors", fit=fit, wgts=standata$wgts, catches=standata$CAT )
 
   res_summ = birth_death_fishing( selection="summary", posterior=posteriors, sppoly=sppoly )
   res_summ$yrs = p$yrs
@@ -93,19 +142,20 @@
 
 
   iyr = which(p$yrs== 2019)
-  vn = "fishing.mortality";  spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
-  vn="biomass"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
-  vn="X"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)  # normalized numerical abundance
-  vn="fraction.fished"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
-  vn="g"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,iyr]); spplot(sppoly, vn)
+  vn = "fishing.mortality";  spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly[,vn] = (spmatrix[,iyr]); plot(sppoly[,vn] )
+  vn="biomass"; spmatrix = apply( posteriors[[vn]], c(2,3), median);  sppoly[,vn] = log(spmatrix[,iyr]); plot(sppoly[,vn] )
 
-  vn="g_ar"; spmatrix = apply( posteriors[[vn]], c(2,3), median); slot(sppoly, "data")[,vn] = (spmatrix[,1]); spplot(sppoly, vn)
+  vn="X"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly[,vn] = (spmatrix[,iyr]); plot(sppoly[,vn] )  # normalized numerical abundance
+  vn="fraction.fished"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly[,vn] = (spmatrix[,iyr]); plot(sppoly[,vn] )
+  vn="g"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly[,vn] = (spmatrix[,iyr]); plot(sppoly[,vn] )
+
+  vn="g_ar"; spmatrix = apply( posteriors[[vn]], c(2,3), median); sppoly[,vn] = (spmatrix[,1]); plot(sppoly[,vn] )
 
 
-  vn="K"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
-  vn="m"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
-  vn="theta"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
-  vn="q"; spmatrix = apply( posteriors[[vn]], c(2), median); slot(sppoly, "data")[,vn] = (spmatrix); spplot(sppoly, vn)
+  vn="K"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly[,vn] = (spmatrix); plot(sppoly[,vn] )
+  vn="m"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly[,vn] = (spmatrix); plot(sppoly[,vn] )
+  vn="theta"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly[,vn] = (spmatrix); plot(sppoly[,vn] )
+  vn="q"; spmatrix = apply( posteriors[[vn]], c(2), median); sppoly[,vn] = (spmatrix); plot(sppoly[,vn] )
 
 
 

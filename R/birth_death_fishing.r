@@ -1,5 +1,5 @@
 
-birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly=NULL, poly_match=NULL, time_match=NULL, catches=NULL, wgts=NULL, ... ) {
+birth_death_fishing = function( selection="stan_code", fit=NULL, vn=NULL, sppoly=NULL, poly_match=NULL, time_match=NULL, catches=NULL, wgts=NULL, ... ) {
 
   message(" ")
   message("todo :: use carstm estimated numbers as IOA")
@@ -241,7 +241,7 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
     ellp = list(...)
     attach(ellp)
 
-    posteriors = rstan::extract( res )  # posteriors = mcmc posteriors from STAN
+    posteriors =  stan_extract( as_draws_df( fit$draws() ) )  # extract all posteriors = mcmc posteriors from STAN
 
     Xdim = dim(posteriors$X)
     nsim = Xdim[1]
@@ -254,7 +254,9 @@ birth_death_fishing = function( selection="stan_code", res=NULL, vn=NULL, sppoly
     posteriors$fraction.fished = posteriors$X[] * 0
     for ( i in 1:nsim ) posteriors$fraction.fished[i,,] = catches[] / posteriors$numbers[i,,]
 
-    posteriors$fishing.mortality = -log( pmax(1e-6, 1.0 - posteriors$fraction.fished ) )
+    posteriors$fishing.mortality =  1.0 - posteriors$fraction.fished[]
+    posteriors$fishing.mortality[ which(posteriors$fishing.mortality < 1e-6) ] = 1e-6
+    posteriors$fishing.mortality = -log( posteriors$fishing.mortality )
     posteriors$fishing.mortality[ !is.finite(posteriors$fishing.mortality)] = 0
 
     # K = array( K, dim=c(dim(K), nsim) )
