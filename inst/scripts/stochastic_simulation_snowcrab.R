@@ -15,7 +15,7 @@
 
   require(SimInf)
   require(ggplot2)
-  require(rstan)
+  require(cmdstanr)
 
   require(aegis)
   require(bio.snowcrab)
@@ -162,8 +162,8 @@
   # time_match = list(year="2000")
   # time_match = list(year="2000", dyear="0.8" )
 
-  spmatrix = apply( posteriors[[vn]], c(2,3), median)
-
+  vn="biomass"; spmatrix = apply( posteriors[[vn]], c(2,3), median)
+  
   birth_death_fishing( "spplot", p=p, spmatrix=spmatrix, vn=vn, time_match=time_match, 
     sp.layout=p$coastLayout, 
     # at = seq(... ) ,
