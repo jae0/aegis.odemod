@@ -48,7 +48,6 @@
   # plot(sppoly)
   # spplot( sppoly, "au_sa_km2", main="AUID", sp.layout=p$coastLayout )
 
-	color_scheme_set("brightblue") 
 
 
   standata = numerical_abundance_catch( p  )
@@ -68,14 +67,14 @@
   # see https://mc-stan.org/cmdstanr/reference/model-method-sample.html for more options
   fit = mod$sample(
     data = mod_data,
-    iter_warmup = 2000,
-    iter_sampling = 500,
-    seed = 123,
+    iter_warmup = 500,
+    iter_sampling = 100,
     chains = 3,
     parallel_chains = 3,  # The maximum number of MCMC chains to run in parallel.
-    max_treedepth = 14,
-    adapt_delta = 0.9,
-    refresh = 500
+    # max_treedepth = 12,
+    # adapt_delta = 0.9,
+    # refresh = 500,
+    seed = 123
   )
 
 
@@ -111,6 +110,7 @@
 
  
 
+    	# color_scheme_set("brightblue") 
       color_scheme_set("gray")
       mcmc_dens(fit$mcmc, regex_pars="K",  facet_args = list(nrow = 3, labeller = ggplot2::label_parsed ) ) + facet_text(size = 14 )   
       # mcmc_hist( fit$draws("K"))

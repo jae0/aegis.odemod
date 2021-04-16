@@ -363,17 +363,17 @@ birth_death_fishing = function( selection="stan_code", fit=NULL, vn=NULL, sppoly
 
     data_dimensionality = length( dim(spmatrix[[vn]]) )
     if (data_dimensionality==1) {
-      slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly ]  # year only
+      sppoly[, vn] = spmatrix[[vn]] [ i_poly ]  # year only
     }
 
     if (!is.null(time_match)) {
       n_indexes = length( time_match )
       if (data_dimensionality==2) {
-        if (n_indexes==1) slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] ]  # year only
+        if (n_indexes==1) sppoly[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] ]  # year only
       }
       if (data_dimensionality==3) {
-        if (n_indexes==1) slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] , ]  # year only
-        if (n_indexes==2) slot(sppoly, "data")[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]], time_match[[2]] ] # year/subyear
+        if (n_indexes==1) sppoly[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]] , ]  # year only
+        if (n_indexes==2) sppoly[, vn] = spmatrix[[vn]] [ i_poly, time_match[[1]], time_match[[2]] ] # year/subyear
       }
     }
 
