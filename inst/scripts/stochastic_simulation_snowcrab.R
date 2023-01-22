@@ -50,19 +50,19 @@
 
 
 
-  standata = numerical_abundance_catch( p  )
+  fmdata = numerical_abundance_catch( p  )
 
   if (0) {
     subset = c(1:10)
-    standata$IOA = standata$IOA[subset,]
-    standata$CAT = floor( standata$CAT[subset,] )
-    standata$U = length(subset)  #
+    fmdata$IOA = fmdata$IOA[subset,]
+    fmdata$CAT = floor( fmdata$CAT[subset,] )
+    fmdata$U = length(subset)  #
   }
 
   mod = stan_initialize( stan_code=birth_death_fishing( "stan_code" ) )
   mod$compile()
 
-  mod_data = standata[c("N", "U", "IOA", "CAT")]
+  mod_data = fmdata[c("N", "U", "IOA", "CAT")]
 
   # see https://mc-stan.org/cmdstanr/reference/model-method-sample.html for more options
   fit = mod$sample(
@@ -126,7 +126,7 @@
     load( fnres )
   }
 
-  posteriors = birth_death_fishing( selection="posteriors", fit=fit, wgts=standata$wgts, catches=standata$CAT )
+  posteriors = birth_death_fishing( selection="posteriors", fit=fit, wgts=fmdata$wgts, catches=fmdata$CAT )
 
   res_summ = birth_death_fishing( selection="summary", posterior=posteriors, sppoly=sppoly )
   res_summ$yrs = p$yrs
@@ -178,7 +178,7 @@
   sims = birth_death_fishing( "stochastic_simulation",
     posteriors=posteriors$numbers,
     K=posteriors$K,
-    catch=standata$CAT,
+    catch=fmdata$CAT,
     g=posteriors$g,
     m=posteriors$m,
     f=posteriors$fishing.mortality
@@ -254,7 +254,7 @@
     }
 
 
-    plot( standata$CAT[au,] ~ c(1:ny), ylim=range(c(posteriors$cat[,au,] * posteriors$K[,au])))
+    plot( fmdata$CAT[au,] ~ c(1:ny), ylim=range(c(posteriors$cat[,au,] * posteriors$K[,au])))
     for (i in 1:nposts) {
       lines( posteriors$cat[i,au,] * posteriors$K[i,au] ~ c(1:ny), col=alpha("orange", 0.01) )
     }
@@ -298,13 +298,13 @@ for (au in 1:nau) {
 for (au in 1:nau) {
   print(au)
 
-  plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$numbers[ ,au, ], posteriors$K[ ,au], standata$CAT[au,]), na.rm=TRUE), type="n")
+  plot( 0,0, xlim=c(0, ny ), ylim=range( c(posteriors$numbers[ ,au, ], posteriors$K[ ,au], fmdata$CAT[au,]), na.rm=TRUE), type="n")
   for (i in 1:nposts) {
     lines( posteriors$numbers[ i, au, ] ~ c(1:ny), col=alpha("green", 0.25) )
     abline( h=posteriors$K[i , au], col=alpha("orange", 0.1) )
   }
-  lines( standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
-  lines( standata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
+  lines( fmdata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99), lwd=4 )
+  lines( fmdata$CAT[ au, ] ~ c(1:ny), col=alpha("magenta", 0.99), lwd=4 )
   lines( apply( posteriors$numbers[ , au, ], 2, median) ~ c(1:ny), col=alpha("darkgrey", 0.99), lwd=4 )
   abline( h=median( posteriors$K[ , au]), col=alpha("blue", 0.9), lwd=4 )
 
@@ -352,7 +352,7 @@ for (au in 1:nau) {
   for (i in 1:nposts) {
     lines( abundance[ i, au, ] ~ c(1:ny), col=alpha("green", 0.01) )
   }
-  lines( standata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99) )
+  lines( fmdata$IOA[ au, ] ~ c(1:ny), col=alpha("red", 0.99) )
   lines( apply( abundance[ , au, ], 2, median) ~ c(1:ny), col=alpha("black", 0.99) )
   for (i in 1:nsims) {
     lines( sim[ i, vn, ] ~ c((ny+1):nyp), col=alpha("magenta", 0.1) )
